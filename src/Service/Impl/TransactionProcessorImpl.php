@@ -3,6 +3,8 @@
 namespace App\Service\Impl;
 
 use App\Country;
+use App\Service\BinProviderService;
+use App\Service\ExchangeRateService;
 use App\Service\TransactionProcessor;
 use App\Transaction;
 use Brick\Math\BigDecimal;
@@ -12,18 +14,18 @@ use GuzzleHttp\Client;
 
 class TransactionProcessorImpl implements TransactionProcessor
 {
-    private $httpClient;
-
-    public function __construct()
+    public function __construct(private $binProvider = new BinProviderService(), private $rateProvider = new ExchangeRateService())
     {
-        $this->httpClient = new Client(['verify' => false]);
     }
 
     public function readTransactions(mixed $input): array
     {
-
+        $transactions = [];
+        if (!file_exists($input)) throw new Exception("File at location '$input' does not exist!", 404);
         foreach (file($input) as $line) {
             $data = json_decode(trim($line), true);
+            if (sizeof($data) !== 3) throw new Exception('Your file has broken Transaction data.', 422);
+
             $transactions[] = new Transaction(
                 $data['bin'],
                 $data['amount'],
@@ -33,57 +35,28 @@ class TransactionProcessorImpl implements TransactionProcessor
         return $transactions;
     }
 
-    /**
-     * @param string $currency
-     * @return Country
-     * @throws \Exception
-     */
-    public function getBinCountry(string $bin): Country
+
+    public function isFromEU(Transaction $transaction) : bool
     {
-        $req = $this->httpClient->get("https://lookup.binlist.net/{$bin}");
-        if ($req->getStatusCode() !== 200) throw new \Exception('API call failed');
-        $res = json_decode($req->getBody()->getContents(), true);
-        return new Country($res['country']['name'], $res['country']['currency'], $res['country']['alpha2']);
+        $country = $this->binProvider->getBinCountry($transaction->getBin());
+        return in_array($country->countryCode, Transaction::EU_COUNTRY_CODES);
     }
 
     /**
-     * @param string $currency Currency that we want to get rate based on base currency
-     * @param string $baseCurrency optional
-     * @return float Rate of currency based on base currency
-     * @throws \Exception
-     */
-    public function getRate(string $currency, string $baseCurrency = 'USD'): float
-    {
-        $req = $this->httpClient->get("https://api.apilayer.com/exchangerates_data/latest?base=$baseCurrency", [
-            'headers' => [
-                'Content-Type' => 'application/json',
-                'apikey' => 'mZ2vhmo0c2LBCE5wFRG1O6eI5HT1WOgs'
-            ]
-        ]);
-        if ($req->getStatusCode() !== 200) throw new \Exception('Failed to retrieve rates');
-        $res = json_decode($req->getBody()->getContents(), true);
-        return $res['rates'][strtoupper($currency)];
-    }
-
-
-    /**
-     * @throws \Exception
      * @return BigDecimal Commissioned amount
+     * @throws \Exception
      */
     public function getCommissionedAmount(Transaction $transaction): BigDecimal
     {
-//        Get currency rate by Transaction`s currency
-        $rate = $this->getRate($transaction->getCurrency());
-
+        $exchangeRate = $this->rateProvider->getRate($transaction->getCurrency());
         $amount = $transaction->getAmount();
+        $isFromEU = $this->isFromEU($transaction);
+        $commissionMultiplier = $transaction->getCommissionMultiplier($isFromEU);
 
-//        If base and comparing currencies are different we have to apply currency rate
-        if ($transaction->getCurrency() !== 'EUR' && $rate > 0) $amount = $amount->dividedBy($rate, null, RoundingMode::HALF_UP);
+        if ($transaction->getCurrency() !== 'EUR' && $exchangeRate > 0) $amount = $amount->dividedBy($exchangeRate, null, RoundingMode::HALF_UP);
 
-//        Apply commission fee based on Transaction`s bin number
-        $amount = $amount->multipliedBy($transaction->getCommissionRate());
+        $amount = $amount->multipliedBy($commissionMultiplier);
 
-//        Round down amount to two decimals
         return BigDecimal::of(round($amount->toFloat(), 2, RoundingMode::HALF_UP));
 
     }

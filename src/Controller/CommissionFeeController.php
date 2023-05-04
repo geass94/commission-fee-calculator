@@ -3,26 +3,41 @@
 namespace App\Controller;
 
 use App\Service\Impl\TransactionProcessorImpl;
+use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Annotation\Route;
 
 class CommissionFeeController extends AbstractController
 {
+    public function __construct(private TransactionProcessorImpl $processor)
+    {
+    }
+
     /**
      * @throws \Exception
      */
-    #[Route('/commission/fee', name: 'app_commission_fee')]
-    public function index(TransactionProcessorImpl $processor): JsonResponse
+    #[Route('/api/commission/fee', name: 'app_commission_fee')]
+    public function index(): JsonResponse
     {
-        $transactions = $processor->readTransactions(('C:\Users\okori\OneDrive\Desktop\task\commission-calculator\input.txt'));
+        try {
+            $transactions = $this->processor->readTransactions('/var/www/input.txt');
+        } catch (\Throwable $exception) {
+            return $this->json([
+                'error' => true,
+                'message' => $exception->getMessage()
+            ], $exception->getCode());
+        }
         $fees = [];
-        foreach ($transactions as $transaction) {
-            try {
-                $fees[] = $processor->getCommissionedAmount($transaction);
-            } catch (\Exception $exception) {
-//                Send API request for example to Sentry.io with exception data and also log locally
+        try {
+            foreach ($transactions as $transaction) {
+                $fees[] = $this->processor->getCommissionedAmount($transaction);
             }
+        } catch (\Exception $exception) {
+            return $this->json([
+                'error' => true,
+                'message' => $exception->getMessage()
+            ], $exception->getCode());
         }
         return $this->json($fees);
     }

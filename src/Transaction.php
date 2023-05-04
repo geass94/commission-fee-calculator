@@ -38,21 +38,13 @@ class Transaction
         return $this->bin;
     }
 
-    private function isFromEU(): bool
-    {
-        $processor = new TransactionProcessorImpl();
-        $cc = $processor->getBinCountry($this->getBin())->countryCode;
-        return in_array($cc, self::EU_COUNTRY_CODES);
-
-    }
-
     /**
      * @throws \Exception
      * @return float Commission fee rate based on country
      */
-    public function getCommissionRate(): float
+    public function getCommissionMultiplier(bool $isFromEU): float
     {
-        return $this->isFromEU() ? 0.01 : 0.02;
+        return $isFromEU ? 0.01 : 0.02;
     }
 
 }
