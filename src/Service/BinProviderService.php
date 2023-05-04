@@ -2,7 +2,7 @@
 
 namespace App\Service;
 
-use App\Country;
+use App\DTO\Country;
 use Exception;
 use GuzzleHttp\Client;
 
@@ -10,6 +10,11 @@ class BinProviderService
 {
     public function __construct(private $httpClient = new Client(['verify' => false]))
     {
+    }
+
+    public function setHttpClient(Client $client): void
+    {
+        $this->httpClient = $client;
     }
 
     public function getBinCountry(int|string $bin): Country

@@ -1,11 +1,8 @@
 <?php
 
-namespace App;
+namespace App\DTO;
 
-use App\Service\Impl\TransactionProcessorImpl;
 use Brick\Math\BigDecimal;
-use Brick\Math\RoundingMode;
-use Psr\Log\LoggerInterface;
 
 class Transaction
 {

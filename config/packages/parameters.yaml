@@ -1,0 +1,3 @@
+parameters:
+    apiLayerKey: '%env(string:APILAYER_KEY)%'
+    app_env: '%env(string:APP_ENV)%'

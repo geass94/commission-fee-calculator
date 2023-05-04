@@ -4,11 +4,17 @@ namespace App\Service;
 
 use Exception;
 use GuzzleHttp\Client;
+use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 
 class ExchangeRateService
 {
-    public function __construct(private $httpClient = new Client(['verify' => false]))
+    public function __construct (private ParameterBagInterface $parameterBag, private $httpClient = new Client(['verify' => false]))
     {
+    }
+
+    public function setHttpClient(Client $client): void
+    {
+        $this->httpClient = $client;
     }
 
     public function getRate(string $currency): float
@@ -17,7 +23,7 @@ class ExchangeRateService
             $req = $this->httpClient->get("https://api.apilayer.com/exchangerates_data/latest", [
                 'headers' => [
                     'Content-Type' => 'application/json',
-                    'apikey' => 'mZ2vhmo0c2LBCE5wFRG1O6eI5HT1WOgs'
+                    'apikey' => $this->parameterBag->get('apiLayerKey')
                 ]
             ]);
         } catch (\Throwable $exception) {

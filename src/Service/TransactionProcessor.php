@@ -2,8 +2,7 @@
 
 namespace App\Service;
 
-use App\Country;
-use App\Transaction;
+use App\DTO\Transaction;
 use Brick\Math\BigDecimal;
 
 interface TransactionProcessor

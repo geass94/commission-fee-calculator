@@ -1,7 +1,7 @@
 <?php
 declare(strict_types = 1);
 
-namespace App;
+namespace App\DTO;
 
 use Brick\Math\BigNumber;
 use Brick\Math\Exception\NumberFormatException;

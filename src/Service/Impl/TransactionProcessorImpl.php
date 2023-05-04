@@ -2,20 +2,28 @@
 
 namespace App\Service\Impl;
 
-use App\Country;
+use App\DTO\Transaction;
 use App\Service\BinProviderService;
 use App\Service\ExchangeRateService;
 use App\Service\TransactionProcessor;
-use App\Transaction;
 use Brick\Math\BigDecimal;
 use Brick\Math\RoundingMode;
 use Exception;
-use GuzzleHttp\Client;
 
 class TransactionProcessorImpl implements TransactionProcessor
 {
-    public function __construct(private $binProvider = new BinProviderService(), private $rateProvider = new ExchangeRateService())
+    public function __construct(private BinProviderService $binProvider, private ExchangeRateService $rateProvider)
     {
+    }
+
+    public function setBinProvider(BinProviderService $service): void
+    {
+        $this->binProvider = $service;
+    }
+
+    public function setRateProvider(ExchangeRateService $service): void
+    {
+        $this->rateProvider = $service;
     }
 
     public function readTransactions(mixed $input): array

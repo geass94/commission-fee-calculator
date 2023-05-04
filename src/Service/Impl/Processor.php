@@ -2,12 +2,9 @@
 
 namespace App\Service\Impl;
 
-use App\Country;
+use App\DTO\Transaction;
 use App\Service\TransactionProcessor;
-use App\Transaction;
 use Brick\Math\BigDecimal;
-use Brick\Math\RoundingMode;
-use GuzzleHttp\Client;
 
 class Processor implements TransactionProcessor
 {
